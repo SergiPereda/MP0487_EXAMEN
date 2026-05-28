@@ -80,7 +80,7 @@ try {
                             <span><?= htmlspecialchars($event['location']) ?></span>
                             <p><?= htmlspecialchars($event['description']) ?></p>
 
-                            <?php if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $event['created_by']): ?>
+                            <?php if ($_SESSION["user_name"] === 'admin'): ?> 
                                 <form action="../controller/eventController.php?action=delete" method="POST" style="margin-top: 1em;">
                                     <input type="hidden" name="event_id" value="<?= $event['id'] ?>" />
                                     <button type="submit" onclick="return confirm('¿Seguro que deseas eliminar este evento?');">
@@ -95,6 +95,7 @@ try {
                                     Editar evento
                                 </button>
                             <?php endif; ?>
+                            
                         </div>
                         <hr class="divider" />
                         <div class="event-button">

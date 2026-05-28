@@ -70,90 +70,96 @@ class EventController
 
     public function delete(): void
     {
-        try {
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                throw new Exception("Método no permitido");
+        //if ($_SESSION["user_name"] === 'admin') {
+            try {
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                    throw new Exception("Método no permitido");
+                }
+
+                if (!isset($_POST['event_id'])) {
+                    throw new Exception("Solicitud inválida");
+                }
+
+                $event_id = intval($_POST['event_id']);
+
+                $stmt = $this->conn->prepare("DELETE FROM events WHERE id = ? AND created_by = ?");
+                if (!$stmt) {
+                    throw new Exception("Error al preparar consulta: " . $this->conn->error);
+                }
+
+                $stmt->bind_param("ii", $event_id, $_SESSION['user_id']);
+
+                if (!$stmt->execute()) {
+                    throw new Exception("Error al eliminar evento: " . $stmt->error);
+                }
+
+                $_SESSION['success_message'] = "Evento eliminado correctamente.";
+                header("Location: ../view/events.php");
+                exit();
+            } catch (Exception $e) {
+                $_SESSION['error_message'] = $e->getMessage();
+                header("Location: ../view/events.php?error=1");
+                exit();
             }
-
-            if (!isset($_POST['event_id'])) {
-                throw new Exception("Solicitud inválida");
-            }
-
-            $event_id = intval($_POST['event_id']);
-
-            $stmt = $this->conn->prepare("DELETE FROM events WHERE id = ? AND created_by = ?");
-            if (!$stmt) {
-                throw new Exception("Error al preparar consulta: " . $this->conn->error);
-            }
-
-            $stmt->bind_param("ii", $event_id, $_SESSION['user_id']);
-
-            if (!$stmt->execute()) {
-                throw new Exception("Error al eliminar evento: " . $stmt->error);
-            }
-
-            $_SESSION['success_message'] = "Evento eliminado correctamente.";
-            header("Location: ../view/events.php");
-            exit();
-        } catch (Exception $e) {
-            $_SESSION['error_message'] = $e->getMessage();
-            header("Location: ../view/events.php?error=1");
-            exit();
-        }
+        //}
+        
     }
 
     public function update(): void
     {
-        try {
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                throw new Exception("Método no permitido");
-            }
+        //if ($_SESSION["user_name"] === 'admin') {
+            try {
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                    throw new Exception("Método no permitido");
+                }
 
-            $event_id = intval($_POST['event_id']);
-            $title = htmlspecialchars(trim($_POST['title']));
-            $datetime = htmlspecialchars(trim($_POST['datetime']));
-            $location = htmlspecialchars(trim($_POST['location']));
-            $description = htmlspecialchars(trim($_POST['description']));
-            $user_id = $_SESSION['user_id'];
+                $event_id = intval($_POST['event_id']);
+                $title = htmlspecialchars(trim($_POST['title']));
+                $datetime = htmlspecialchars(trim($_POST['datetime']));
+                $location = htmlspecialchars(trim($_POST['location']));
+                $description = htmlspecialchars(trim($_POST['description']));
+                $user_id = $_SESSION['user_id'];
 
-            // Verify that the event belongs to the current user
-            $check = $this->conn->query("SELECT * FROM events WHERE id = $event_id AND created_by = $user_id");
-            if ($check->num_rows === 0) {
-                throw new Exception("No tienes permiso para actualizar este evento.");
-            }
+                // Verify that the event belongs to the current user
+                $check = $this->conn->query("SELECT * FROM events WHERE id = $event_id AND created_by = $user_id");
+                if ($check->num_rows === 0) {
+                    throw new Exception("No tienes permiso para actualizar este evento.");
+                }
 
-            $image_path_sql = '';
-            if (isset($_FILES['event_image']) && $_FILES['event_image']['error'] === UPLOAD_ERR_OK) {
-                $image_path = $this->uploadImage($_FILES['event_image']);
-                $image_path_escaped = $this->conn->real_escape_string($image_path);
-                $image_path_sql = ", image_path = '$image_path_escaped'";
-            }
+                $image_path_sql = '';
+                if (isset($_FILES['event_image']) && $_FILES['event_image']['error'] === UPLOAD_ERR_OK) {
+                    $image_path = $this->uploadImage($_FILES['event_image']);
+                    $image_path_escaped = $this->conn->real_escape_string($image_path);
+                    $image_path_sql = ", image_path = '$image_path_escaped'";
+                }
 
-            $title_escaped = $this->conn->real_escape_string($title);
-            $datetime_escaped = $this->conn->real_escape_string($datetime);
-            $location_escaped = $this->conn->real_escape_string($location);
-            $description_escaped = $this->conn->real_escape_string($description);
+                $title_escaped = $this->conn->real_escape_string($title);
+                $datetime_escaped = $this->conn->real_escape_string($datetime);
+                $location_escaped = $this->conn->real_escape_string($location);
+                $description_escaped = $this->conn->real_escape_string($description);
 
-            $sql = "UPDATE events SET 
-                        title = '$title_escaped',
-                        event_date = '$datetime_escaped',
-                        location = '$location_escaped',
-                        description = '$description_escaped'
-                        $image_path_sql
-                    WHERE id = $event_id AND created_by = $user_id";
+                $sql = "UPDATE events SET 
+                            title = '$title_escaped',
+                            event_date = '$datetime_escaped',
+                            location = '$location_escaped',
+                            description = '$description_escaped'
+                            $image_path_sql
+                        WHERE id = $event_id AND created_by = $user_id";
 
-            if ($this->conn->query($sql)) {
-                $_SESSION['success_message'] = "Evento actualizado correctamente.";
-                header("Location: ../view/events.php");
+                if ($this->conn->query($sql)) {
+                    $_SESSION['success_message'] = "Evento actualizado correctamente.";
+                    header("Location: ../view/events.php");
+                    exit();
+                } else {
+                    throw new Exception("Error al actualizar el evento: " . $this->conn->error);
+                }
+            } catch (Exception $e) {
+                $_SESSION['error_message'] = $e->getMessage();
+                header("Location: ../view/events.php?error=1");
                 exit();
-            } else {
-                throw new Exception("Error al actualizar el evento: " . $this->conn->error);
             }
-        } catch (Exception $e) {
-            $_SESSION['error_message'] = $e->getMessage();
-            header("Location: ../view/events.php?error=1");
-            exit();
-        }
+        //}
+        
     }
 
     private function uploadImage($file): ?string
